@@ -220,7 +220,7 @@ class Game:
         if self.playOnlyLastCards != 0:
             for hand in temphands:
                 while len(hand) > self.playOnlyLastCards:
-                    hand.pop() # removal of cards so there are 5 left
+                    hand.pop() # removal of cards so there are playOnlyLastCards left
 
         self.play_recursive(0, [temphands[idx] for idx in range(NUMBER_OF_PLAYERS)], [], [])
         if self.playOnlyFirstCards != 0:
@@ -236,7 +236,7 @@ if __name__ == '__main__':
     g.deal_cards_before_game_start()
     for i in range(NUMBER_OF_PLAYERS):
         print(g.PLAYER[i].current_hand)
-    g.playOnlyFirstCards = 2 # check how many are first 2 cards combinations and how fast are they played
+    g.playOnlyFirstCards = 3 # check how many are first 3 cards combinations and how fast are they played
     timeStart = time.perf_counter()
     g.play_deals_fast()
     timeEnd = time.perf_counter() - timeStart
@@ -246,7 +246,7 @@ if __name__ == '__main__':
     h.deal_cards_before_game_start()
     for i in range(NUMBER_OF_PLAYERS):
         print(h.PLAYER[i].current_hand)
-    h.playOnlyLastCards = 6 # check how many are last 6 cards combinations and how fast are they played
+    h.playOnlyLastCards = 5 # check how many are last 5 cards combinations and how fast are they played
     timeStart2 = time.perf_counter()
     h.play_deals_fast()
     timeEnd2 = time.perf_counter() - timeStart2
@@ -259,7 +259,7 @@ if __name__ == '__main__':
     a.deal_cards_before_game_start()
     for i in range(NUMBER_OF_PLAYERS):
         print(a.PLAYER[i].current_hand)
-    a.playOnlyFirstCards = 3 # check how many are first 3 cards combinations and how fast are they played
+    a.playOnlyFirstCards = 2 # check how many are first 2 cards combinations and how fast are they played
     timeStart = time.perf_counter()
     a.play_deals_fast()
     timeEnd = time.perf_counter() - timeStart
@@ -269,12 +269,12 @@ if __name__ == '__main__':
     b.deal_cards_before_game_start()
     for i in range(NUMBER_OF_PLAYERS):
         print(b.PLAYER[i].current_hand)
-    b.playOnlyLastCards = 5 # check how many are last 5 cards combinations and how fast are they played
+    b.playOnlyLastCards = 6 # check how many are last 6 cards combinations and how fast are they played
     timeStart2 = time.perf_counter()
     b.play_deals_fast()
     timeEnd2 = time.perf_counter() - timeStart2
     print("time for last" + str(b.playOnlyLastCards)+ " cards : " + str(timeEnd2))
 
     print("Total estimated combs with " + str(a.playOnlyFirstCards) + " * " + str(b.playOnlyLastCards) + ": " + str(b.played_deals_count * a.played_deals_count)) 
-    print(" Potential time for first idea: " + str((timeEnd + b.played_deals_count * timeEnd2) / 3600) + " hours" )
+    print(" Potential time for second idea: " + str((timeEnd + b.played_deals_count * timeEnd2) / 3600) + " hours" )
 
