@@ -21,6 +21,10 @@ COLORS = {
     'SPADES': [True, True],
 }
 
+HAND_SIZE = 8
+NUMBER_OF_PLAYERS = 4
+NUMBER_OF_CARDS = 32
+
 """Generate card names dynamically based on dictionary keys"""
 CARD_TUPLES = [(value, color) for value in CARD_VALUE.keys() for color in COLORS.keys()]
 
