@@ -18,8 +18,9 @@ class Game:
         self.played_deals = []
         self.announce = ''
         self.played_deals_count = 0
-        self.playOnlyFirstCards = 0 # for test
-        self.playOnlyLastCards = 0 # for test
+        self.first_deals_combinations = []  # TODO variable pollution
+        self.second_deal_combinations = []  # variables for  saving played cards by algorithm
+        self.remaining_cards = []
 
     def shuffle_deck(self):
         self.deck = copy.deepcopy(CARD_TUPLES)
@@ -68,7 +69,7 @@ class Game:
                 return True
         return False
 
-    def sort_hands(self):
+    def sort_hands(self, ):
         """Simple insertion sort for cards by color"""
         for x in range(NUMBER_OF_PLAYERS):
             tempHand = self.PLAYER[x].current_hand
@@ -173,18 +174,25 @@ class Game:
 
         return len(self.played_deals)
 
-    def play_recursive(self, turn_id, all_hands, played_cards, current_deal):
-        """ TODO: Calculate possible moves;
+    def play_recursive(self, turn_id, all_hands, played_cards, current_deal, first_cards=0, second_cards=0):
+        """ TODO: Calculate possible moves
             TODO: Save played cards
             TODO: Optimise even more (numpy arrays)
         """
-        if self.playOnlyFirstCards != 0: # turn reducing
-            if turn_id == NUMBER_OF_PLAYERS * self.playOnlyFirstCards:
+        if len(played_cards) == NUMBER_OF_PLAYERS:  # reset deal
+            current_deal.append(played_cards)
+            played_cards = []
+
+        if first_cards != 0:  # turn reducing
+            if turn_id == NUMBER_OF_PLAYERS * first_cards:
+                self.first_deals_combinations.append(current_deal)  # save played game
+                self.remaining_cards.append(all_hands)  # save remaining hands for the game
                 self.return_when_all_cards_played()
                 return True
-        elif self.playOnlyLastCards != 0:
-            if turn_id == NUMBER_OF_PLAYERS * self.playOnlyLastCards:
+        elif second_cards != 0:
+            if turn_id == NUMBER_OF_PLAYERS * second_cards:
                 self.return_when_all_cards_played()
+                self.second_deal_combinations.append(current_deal)  # save played game
                 return True
         elif turn_id == NUMBER_OF_CARDS:
             self.return_when_all_cards_played()
@@ -193,19 +201,17 @@ class Game:
         current_player_idx = turn_id % NUMBER_OF_PLAYERS
         current_hand_copy = [*all_hands[current_player_idx]]
 
-        if len(played_cards) == NUMBER_OF_PLAYERS:
-            current_deal.append(played_cards)
-            played_cards = []
-
         self.change_current_player_index()
-        for card in self.playable_by_hand_and_played_cards(self.announce, current_hand_copy, played_cards):
+        for card in self.playable_by_hand_and_played_cards(self.announce, current_hand_copy,
+                                                           played_cards):  # for each playable cards
             new_hand = [*current_hand_copy]
             new_hand.remove(card)
             new_played_cards = [*played_cards]
             new_played_cards.append(card)
-            hands = [*all_hands]
+            hands = [*all_hands]  # generate copies of new hands
             hands[current_player_idx] = new_hand
-            self.play_recursive((turn_id + 1), hands, [*new_played_cards], [*current_deal])
+            self.play_recursive((turn_id + 1), [*hands], [*new_played_cards], [*current_deal], first_cards,
+                                second_cards)  # play the next card
 
     def return_when_all_cards_played(self):
         self.played_deals_count += 1
@@ -213,22 +219,39 @@ class Game:
             print("finished" + str(self.played_deals_count))
         return True
 
-    def play_deals_fast(self):
-        """Logic about playing all possible deals with current hands"""
+    def play_deals_fast(self, first_cards=0, second_cards=0, deal_id=-1):
+        """Logic about playing all possible deals with current hand"""
         self.sort_hands()
-        temphands = [self.PLAYER[idx].current_hand.copy() for idx in range(NUMBER_OF_PLAYERS)]
-        if self.playOnlyLastCards != 0:
-            for hand in temphands:
-                while len(hand) > self.playOnlyLastCards:
-                    hand.pop() # removal of cards so there are playOnlyLastCards left
+        temphands = [[*self.PLAYER[idx].current_hand] for idx in range(NUMBER_OF_PLAYERS)]
+        if second_cards != 0:
+            if deal_id == -1:
+                for hand in temphands:
+                    while len(hand) > second_cards:
+                        del hand[0]  # removal of cards so there are second_cards left
+            else:
+                self.play_recursive(0, [self.remaining_cards[deal_id][idx] for idx in range(NUMBER_OF_PLAYERS)], [], [],
+                                    first_cards, second_cards)
+                return
+        self.play_recursive(0, [temphands[idx] for idx in range(NUMBER_OF_PLAYERS)], [], [], first_cards, second_cards)
 
-        self.play_recursive(0, [temphands[idx] for idx in range(NUMBER_OF_PLAYERS)], [], [])
-        if self.playOnlyFirstCards != 0:
-            print("Played Deals with only first" + str(self.playOnlyFirstCards) + " cards: " + str(self.played_deals_count))
-        elif self.playOnlyLastCards != 0:
-            print("Played Deals with only random last" +  str(self.playOnlyLastCards) + " cards: " + str(self.played_deals_count))
-        else:
-            print(self.played_deals_count)
+    def play_separated_to_x_then_y(self, cards):
+        """ Dynamic programing alg for playing first all with x cards then all possible for them"""
+        time_start = time.perf_counter()
+        self.play_deals_fast(cards)  # play all combinations with first cards
+        print("Played Deals with: " + str(cards) + ": " + str(len(self.first_deals_combinations)))
+
+        for deal_id in range(len(self.first_deals_combinations)):  # for each of current played
+            self.play_deals_fast(0, HAND_SIZE - cards, deal_id)  # play all combinations with last cards
+            time_write = time.perf_counter()  # time for writing start
+            for idx in range(len(self.second_deal_combinations)):
+                combined_deals = self.first_deals_combinations[deal_id] + self.second_deal_combinations[idx]
+                # append to each played first cards the last played cards
+                self.played_deals.append(combined_deals)
+            self.second_deal_combinations = []  # reset played second cards
+            time_write = time.perf_counter() - time_write  # calc time write
+            print(time_write)
+            timeEnd = time.perf_counter() - time_start  # current time for calculating
+            print("Current Played: " + str(len(self.played_deals)) + " time:" + str(timeEnd))
 
 
 if __name__ == '__main__':
@@ -236,44 +259,4 @@ if __name__ == '__main__':
     g.deal_cards_before_game_start()
     for i in range(NUMBER_OF_PLAYERS):
         print(g.PLAYER[i].current_hand)
-    g.playOnlyFirstCards = 3 # check how many are first 3 cards combinations and how fast are they played
-    timeStart = time.perf_counter()
-    g.play_deals_fast()
-    timeEnd = time.perf_counter() - timeStart
-    print("time for first" +  str(g.playOnlyFirstCards) + " cards :" + str(timeEnd))
-
-    h = Game([HumanPlayer(), HumanPlayer(), HumanPlayer(), HumanPlayer()])
-    h.deal_cards_before_game_start()
-    for i in range(NUMBER_OF_PLAYERS):
-        print(h.PLAYER[i].current_hand)
-    h.playOnlyLastCards = 5 # check how many are last 5 cards combinations and how fast are they played
-    timeStart2 = time.perf_counter()
-    h.play_deals_fast()
-    timeEnd2 = time.perf_counter() - timeStart2
-    print("time for last" + str(h.playOnlyLastCards)+ " cards : " + str(timeEnd2))
-
-    print("Total estimated combs with " + str(g.playOnlyFirstCards) + " * " + str(h.playOnlyLastCards) + ": " + str(h.played_deals_count * g.played_deals_count))
-    print(" Potential time for first idea: " + str((timeEnd + h.played_deals_count * timeEnd2) / 3600) + " hours" )
-
-    a = Game([HumanPlayer(), HumanPlayer(), HumanPlayer(), HumanPlayer()])
-    a.deal_cards_before_game_start()
-    for i in range(NUMBER_OF_PLAYERS):
-        print(a.PLAYER[i].current_hand)
-    a.playOnlyFirstCards = 2 # check how many are first 2 cards combinations and how fast are they played
-    timeStart = time.perf_counter()
-    a.play_deals_fast()
-    timeEnd = time.perf_counter() - timeStart
-    print("time for first" +  str(a.playOnlyFirstCards) + " cards :" + str(timeEnd))
-
-    b = Game([HumanPlayer(), HumanPlayer(), HumanPlayer(), HumanPlayer()])
-    b.deal_cards_before_game_start()
-    for i in range(NUMBER_OF_PLAYERS):
-        print(b.PLAYER[i].current_hand)
-    b.playOnlyLastCards = 6 # check how many are last 6 cards combinations and how fast are they played
-    timeStart2 = time.perf_counter()
-    b.play_deals_fast()
-    timeEnd2 = time.perf_counter() - timeStart2
-    print("time for last" + str(b.playOnlyLastCards)+ " cards : " + str(timeEnd2))
-
-    print("Total estimated combs with " + str(a.playOnlyFirstCards) + " * " + str(b.playOnlyLastCards) + ": " + str(b.played_deals_count * a.played_deals_count))
-    print(" Potential time for second idea: " + str((timeEnd + b.played_deals_count * timeEnd2) / 3600) + " hours" )
+    g.play_separated_to_x_then_y(3)
