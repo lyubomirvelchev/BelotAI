@@ -1,7 +1,7 @@
 import copy
 import random
 from secrets import randbelow
-
+import timeit
 from teams_players import HumanPlayer, AIPlayer
 from project_constants import *
 
@@ -79,11 +79,15 @@ class Game:
 
     @staticmethod
     def search_by_color(hand, color):
-        """Return True if the color is in the hand else False"""
-        for idx in range(len(hand)):
-            if hand[idx][1] == color:
-                return True
-        return False
+        """Function improving search by color"""
+        if color == list(COLORS)[len(list(COLORS)) - 1] or color == list(COLORS)[len(list(COLORS)) - 2]:
+            for x in reversed(range(0, len(hand))):
+                if hand[x][1] == color:
+                    return True
+        else:
+            for x in range(0, len(hand)):
+                if hand[x][1] == color:
+                    return True
 
     def play_card(self, card):
         """Logic about played card"""
@@ -178,6 +182,7 @@ class Game:
 
         if turn_id == NUMBER_OF_CARDS:
             self.played_deals_count += 1
+
             if self.played_deals_count % 100000 == 0:
                 print("finished" + str(self.played_deals_count))
             return True
@@ -214,3 +219,5 @@ if __name__ == '__main__':
     for i in range(NUMBER_OF_PLAYERS):
         print(g.PLAYER[i].current_hand)
     print(g.play_deals_fast())
+
+
