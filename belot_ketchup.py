@@ -17,6 +17,7 @@ class Game:
         self.current_deal = []
         self.played_deals = []
         self.announce = ''
+        self.color_trump = 0  # TODO Color dictionary id -> name
         self.played_deals_count = 0
         self.first_deals_combinations = []  # TODO variable pollution
         self.second_deal_combinations = []  # variables for  saving played cards by algorithm
@@ -62,10 +63,10 @@ class Game:
 
     def compare_cards(self, card1, card2):
         """Simple compare for cards by color and power"""
-        if list(COLORS).index(card1[1]) > list(COLORS).index(card2[1]):
+        if list(COLORS_TO_BYTES).index(card1[1]) > list(COLORS_TO_BYTES).index(card2[1]):
             return True
-        elif list(COLORS).index(card1[1]) == list(COLORS).index(card2[1]):
-            if list(CARD_VALUE).index(card1[0]) > list(CARD_VALUE).index(card2[0]):
+        elif list(COLORS_TO_BYTES).index(card1[1]) == list(COLORS_TO_BYTES).index(card2[1]):
+            if list(CARD_VALUE_TO_BYTES).index(card1[0]) > list(CARD_VALUE_TO_BYTES).index(card2[0]):
                 return True
         return False
 
@@ -123,15 +124,14 @@ class Game:
         """Logic about which cards are allowed to be played"""
         if not playedCards or playedCards == []:
             return hand
-
+        possible_options = []
         if announce == "ALL_TRUMP":
+
             if not self.search_by_color(hand, playedCards[0][1]):
                 return hand
 
-            possible_options = []
-
             for x in hand:
-                if playedCards[0][1] == x[1] and list(CARD_VALUE).index(x[0]) > list(CARD_VALUE).index(
+                if playedCards[0][1] == x[1] and list(CARD_VALUE_TO_BYTES).index(x[0]) > list(CARD_VALUE_TO_BYTES).index(
                         playedCards[-1][0]):
                     possible_options.append(x)
 
@@ -144,6 +144,49 @@ class Game:
                 return hand
             else:
                 return possible_options
+
+        elif announce == "NO_TRUMP":
+
+            if not self.search_by_color(hand, playedCards[0][1]):
+                return hand
+
+            for x in hand:
+                if playedCards[0][1] == x[1]:
+                    possible_options.append(x)
+
+            if possible_options == []:
+                return hand
+            else:
+                return possible_options
+        elif announce == "TRUMP":
+
+            if self.color_trump == None:  # retard check
+                raise TypeError("NO TRUMP COLOR!")
+
+            if not self.search_by_color(hand, playedCards[0][1]):  # if you dont have card with same color of first one
+
+                last_trump = None  # check if someone used trump (ako e kozil nqkoi)
+                for card in playedCards:
+                    if card[1] == list(COLORS_TO_BYTES)[self.color_trump]:
+                        last_trump = card
+
+                if last_trump != None:  # if someone used trump and u have highter u must use it
+                    for x in hand:
+                        if last_trump[1] == x[1] and list(CARD_VALUE_TO_BYTES).index(x[0]) > list(CARD_VALUE_TO_BYTES).index(
+                                last_trump[0]):
+                            possible_options.append(x)
+                elif last_trump == None:  # if no one used trump and u must use
+                    for x in hand:
+                        if list(COLORS_TO_BYTES)[self.color_trump] == x[1]:
+                            possible_options.append(x)
+                if possible_options != []:
+                    return possible_options
+                return hand
+            elif playedCards[0][1] == list(COLORS_TO_BYTES)[
+                self.color_trump]:  # if you have card with same color an play on trump all trump logic aplies
+                return self.playable_by_hand_and_played_cards("ALL_TRUMP", hand, playedCards)
+            else:  # if you have card with same color an play other than trump no trump logic aplies
+                return self.playable_by_hand_and_played_cards("NO_TRUMP", hand, playedCards)
 
     def play_deals(self):
         """Logic about playing all possible deals with current hands"""
@@ -238,10 +281,11 @@ class Game:
         """ Dynamic programing alg for playing first all with x cards then all possible for them"""
         time_start = time.perf_counter()
         self.play_deals_fast(cards)  # play all combinations with first cards
-        print("Played Deals with: " + str(cards) + ": " + str(len(self.first_deals_combinations)))
+        first_deals_combinations = len(self.first_deals_combinations)
+        print("Played Deals with: " + str(cards) + ": " + str(first_deals_combinations))
 
         for deal_id in range(len(self.first_deals_combinations)):  # for each of current played
-            self.play_deals_fast(0, HAND_SIZE - cards, deal_id)  # play all combinations with last cards
+            self.play_deals_fast(0, NUMBER_OF_DEALS - cards, deal_id)  # play all combinations with last cards
             time_write = time.perf_counter()  # time for writing start
             for idx in range(len(self.second_deal_combinations)):
                 combined_deals = self.first_deals_combinations[deal_id] + self.second_deal_combinations[idx]
@@ -252,11 +296,16 @@ class Game:
             print(time_write)
             timeEnd = time.perf_counter() - time_start  # current time for calculating
             print("Current Played: " + str(len(self.played_deals)) + " time:" + str(timeEnd))
+            first_deals_combinations = first_deals_combinations - 1
+            print("Remaining recursive calls : " + str(first_deals_combinations))
 
 
 if __name__ == '__main__':
     g = Game([HumanPlayer(), HumanPlayer(), HumanPlayer(), HumanPlayer()])
     g.deal_cards_before_game_start()
+    g.sort_hands()
     for i in range(NUMBER_OF_PLAYERS):
         print(g.PLAYER[i].current_hand)
+    g.announce = "TRUMP"
+    g.color_trump = 1  # DIAMONDS
     g.play_separated_to_x_then_y(3)

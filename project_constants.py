@@ -10,7 +10,6 @@ TEAMS = {
     (1, 1): 'TEAM_2',
 }
 
-
 ALL_TRUMP_POINTS = {
     (0, 0, 0): 0,
     (0, 0, 1): 0,
@@ -33,7 +32,7 @@ NO_TRUMP_POINTS = {
     (1, 1, 1): 11,
 }
 
-CARD_VALUE = {
+CARD_VALUE_TO_BYTES = {
     '7': (0, 0, 0),
     '8': (0, 0, 1),
     '9': (0, 1, 0),
@@ -44,26 +43,28 @@ CARD_VALUE = {
     'A': (1, 1, 1),
 }
 
-COLORS = {
+COLORS_TO_BYTES = {
     'CLUBS': (0, 0),
     'DIAMONDS': (0, 1),
     'HEARTS': (1, 0),
     'SPADES': (1, 1),
 }
 
-HAND_SIZE = 8
+BYTES_TO_COLORS = {tpl: color for color, tpl in COLORS_TO_BYTES.items()}
+BYTES_TO_CARD_VALUE = {tpl: value for value, tpl in CARD_VALUE_TO_BYTES.items()}
+
+NUMBER_OF_DEALS = 8
 NUMBER_OF_PLAYERS = 4
 NUMBER_OF_CARDS = 32
 
 """Generate card names dynamically based on dictionary keys"""
-CARD_TUPLES = [(value, color) for value in CARD_VALUE.keys() for color in COLORS.keys()]
+CARD_TUPLES = [(value, color) for value in CARD_VALUE_TO_BYTES.keys() for color in COLORS_TO_BYTES.keys()]
 
 """Generate card bites representation dynamically based on value on color"""
-CARD_TO_BYTES = {card: bitarray.bitarray(CARD_VALUE[card[0]] + COLORS[card[1]]) for card in CARD_TUPLES}
-BYTES_TO_CARD = {tuple(bitarray.bitarray(CARD_VALUE[card[0]] + COLORS[card[1]])): card for card in CARD_TUPLES}
-EXAMPLE_BIT_ARRAY = bitarray.bitarray('100101001011110010111101000101001011110010111101'*4)
-
-# EXAMPLE_BIT_ARRAY = bitarray.bitarray('00{}0101{}1111{}0101{}1111{}0000{}1010{}0101{}11'.format())
+CARD_TO_BYTES = {card: bitarray.bitarray(CARD_VALUE_TO_BYTES[card[0]] + COLORS_TO_BYTES[card[1]]) for card in
+                 CARD_TUPLES}
+BYTES_TO_CARD = {tuple(bitarray.bitarray(CARD_VALUE_TO_BYTES[card[0]] + COLORS_TO_BYTES[card[1]])): card for card in
+                 CARD_TUPLES}
 
 if __name__ == '__main__':
     import pprint
