@@ -70,6 +70,21 @@ class Game:
                 return True
         return False
 
+    def compare_cards_power(self, card1, card2, announce):
+        if announce == "ALL_TRUMP":
+            points_first = ALL_TRUMP_POINTS[CARD_VALUE_TO_BYTES[card1[0]]]
+            points_second = ALL_TRUMP_POINTS[CARD_VALUE_TO_BYTES[card2[0]]]
+        elif announce == "NO_TRUMP":
+            points_first = NO_TRUMP_POINTS[CARD_VALUE_TO_BYTES[card1[0]]]
+            points_second = NO_TRUMP_POINTS[CARD_VALUE_TO_BYTES[card2[0]]]
+
+        if points_first > points_second:
+            return True
+        elif points_second == points_first:
+            if list(CARD_VALUE_TO_BYTES).index(card1[0]) > list(CARD_VALUE_TO_BYTES).index(card2[0]):
+                return True
+        return False
+
     def sort_hands(self, ):
         """Simple insertion sort for cards by color"""
         for x in range(NUMBER_OF_PLAYERS):
@@ -104,6 +119,7 @@ class Game:
         return True
 
     def playable_cards(self, announce):
+        # TODO: to be removed
         """Logic about which cards are allowed to be played"""
         if not self.played_cards:
             return self.PLAYER[self.current_player_idx].current_hand
@@ -115,13 +131,14 @@ class Game:
             for x in self.PLAYER[self.current_player_idx].current_hand:
                 if self.played_cards[0][1] == x[1]:
                     possible_options.append(x)
-            if possible_options == []:
+            if possible_options == [] or possible_options == None:
                 return self.PLAYER[self.current_player_idx].current_hand
             else:
                 return possible_options
 
     def playable_by_hand_and_played_cards(self, announce, hand, playedCards):
         """Logic about which cards are allowed to be played"""
+        # TODO: refactor
         if not playedCards or playedCards == []:
             return hand
         possible_options = []
@@ -131,16 +148,15 @@ class Game:
                 return hand
 
             for x in hand:
-                if playedCards[0][1] == x[1] and list(CARD_VALUE_TO_BYTES).index(x[0]) > list(CARD_VALUE_TO_BYTES).index(
-                        playedCards[-1][0]):
+                if playedCards[0][1] == x[1] and self.compare_cards_power(x, playedCards[-1], announce):
                     possible_options.append(x)
 
-            if possible_options == []:
+            if possible_options == [] or possible_options == None:
                 for x in hand:
                     if playedCards[0][1] == x[1]:
                         possible_options.append(x)
 
-            if possible_options == []:
+            if possible_options == [] or possible_options == None:
                 return hand
             else:
                 return possible_options
@@ -154,26 +170,26 @@ class Game:
                 if playedCards[0][1] == x[1]:
                     possible_options.append(x)
 
-            if possible_options == []:
+            if possible_options == [] or possible_options == None:
                 return hand
             else:
                 return possible_options
+
         elif announce == "TRUMP":
 
             if self.color_trump == None:  # retard check
                 raise TypeError("NO TRUMP COLOR!")
 
             if not self.search_by_color(hand, playedCards[0][1]):  # if you dont have card with same color of first one
-
                 last_trump = None  # check if someone used trump (ako e kozil nqkoi)
                 for card in playedCards:
                     if card[1] == list(COLORS_TO_BYTES)[self.color_trump]:
                         last_trump = card
 
-                if last_trump != None:  # if someone used trump and u have highter u must use it
+                if last_trump != None and last_trump != playedCards[
+                    len(playedCards) - 2]:  # if someone used trump and u have highter u must use it unless it's your teammate
                     for x in hand:
-                        if last_trump[1] == x[1] and list(CARD_VALUE_TO_BYTES).index(x[0]) > list(CARD_VALUE_TO_BYTES).index(
-                                last_trump[0]):
+                        if last_trump[1] == x[1] and self.compare_cards_power(x, last_trump, "ALL_TRUMP"):
                             possible_options.append(x)
                 elif last_trump == None:  # if no one used trump and u must use
                     for x in hand:
@@ -217,12 +233,17 @@ class Game:
 
         return len(self.played_deals)
 
-    def play_recursive(self, turn_id, all_hands, played_cards, current_deal, first_cards=0, second_cards=0):
+    def play_recursive(self, turn_id, all_hands, played_cards, current_deal, first_cards=0, second_cards=0,
+                       current_player=0):
         """ TODO: Calculate possible moves
             TODO: Save played cards
             TODO: Optimise even more (numpy arrays)
         """
         if len(played_cards) == NUMBER_OF_PLAYERS:  # reset deal
+            winner_of_deal = self.calculate_winner_of_deal(played_cards, self.announce)
+            current_player = winner_of_deal
+            """TODO: create 24 bit deal bitarray + save + choose how much CPU"""
+
             current_deal.append(played_cards)
             played_cards = []
 
@@ -241,8 +262,8 @@ class Game:
             self.return_when_all_cards_played()
             return True
 
-        current_player_idx = turn_id % NUMBER_OF_PLAYERS
-        current_hand_copy = [*all_hands[current_player_idx]]
+        current_player = current_player % 4
+        current_hand_copy = [*all_hands[current_player]]
 
         self.change_current_player_index()
         for card in self.playable_by_hand_and_played_cards(self.announce, current_hand_copy,
@@ -252,9 +273,9 @@ class Game:
             new_played_cards = [*played_cards]
             new_played_cards.append(card)
             hands = [*all_hands]  # generate copies of new hands
-            hands[current_player_idx] = new_hand
+            hands[current_player] = new_hand
             self.play_recursive((turn_id + 1), [*hands], [*new_played_cards], [*current_deal], first_cards,
-                                second_cards)  # play the next card
+                                second_cards, (current_player + 1))  # play the next card
 
     def return_when_all_cards_played(self):
         self.played_deals_count += 1
@@ -289,6 +310,9 @@ class Game:
             time_write = time.perf_counter()  # time for writing start
             for idx in range(len(self.second_deal_combinations)):
                 combined_deals = self.first_deals_combinations[deal_id] + self.second_deal_combinations[idx]
+                """TODO CONVERT TO BINARY AND THREAD"""
+                # TODO: process/thread ask Bakas
+
                 # append to each played first cards the last played cards
                 self.played_deals.append(combined_deals)
             self.second_deal_combinations = []  # reset played second cards
@@ -299,6 +323,25 @@ class Game:
             first_deals_combinations = first_deals_combinations - 1
             print("Remaining recursive calls : " + str(first_deals_combinations))
 
+    def calculate_winner_of_deal(self, played_cards, announce):
+        current_winner = played_cards[0]
+        if announce == "TRUMP":
+            trumpid = list(COLORS_TO_BYTES)[self.color_trump]
+            for card in played_cards:
+                if card[1] == trumpid and current_winner[1] != trumpid:
+                    current_winner = card
+                elif card[1] == trumpid and current_winner[1] == trumpid:
+                    if self.compare_cards_power(card, current_winner, "ALL_TRUMP"):
+                        current_winner = card
+                elif card[1] != trumpid and current_winner[1] != trumpid:
+                    if self.compare_cards_power(card, current_winner, "NO_TRUMP"):
+                        current_winner = card
+        else:
+            for card in played_cards:
+                if self.compare_cards_power(card, current_winner, announce):
+                    current_winner = card
+        return played_cards.index(current_winner)
+
 
 if __name__ == '__main__':
     g = Game([HumanPlayer(), HumanPlayer(), HumanPlayer(), HumanPlayer()])
@@ -307,5 +350,6 @@ if __name__ == '__main__':
     for i in range(NUMBER_OF_PLAYERS):
         print(g.PLAYER[i].current_hand)
     g.announce = "TRUMP"
-    g.color_trump = 1  # DIAMONDS
+    g.color_trump = 3  # SPADES
+
     g.play_separated_to_x_then_y(3)

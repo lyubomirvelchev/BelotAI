@@ -1,0 +1,11 @@
+Lyubo:
+    - pack single deals into game bitarray
+    - bitarray in game analyzer then save metadata for game
+    - Separate process for this shit
+
+Ketchup:
+    - Refactor (Helper + split played by hand)
+    - Game Analyzer announcements
+
+
+Announcement Phase in Game
